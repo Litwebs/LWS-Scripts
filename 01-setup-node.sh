@@ -1,61 +1,127 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-# === VALIDATE ARGUMENTS ===
+# =====================================================================
+# 01-setup-node.sh — LitWebs Universal Node Setup
+# Supports structure:
+#   project-name/
+#     server/
+#     client/
+# =====================================================================
+
 if [ "$#" -ne 2 ]; then
     echo "Usage: $0 <GitHubRepoURL> <MongoDBConnectionString>"
     exit 1
 fi
 
-REPO_URL=$1
-MONGO_CONN_STRING=$2
+REPO_URL="$1"
+MONGO_URI="$2"
 
-# === INSTALL SYSTEM DEPENDENCIES ===
-echo "== Updating System =="
-sudo apt update && sudo apt upgrade -y
+# Detect repo folder name
+PROJECT_DIR=$(basename "$REPO_URL" .git)
+
+echo "======================================="
+echo "🚀 Starting Node.js setup for project: $PROJECT_DIR"
+echo "======================================="
+
+# --------------------------------------------------------
+# Install system packages
+# --------------------------------------------------------
+sudo apt update -y
+sudo apt upgrade -y
 sudo apt install -y curl ca-certificates git
 
-# === INSTALL NODE.JS ===
-echo "== Installing Node.js =="
-curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash -
-sudo apt install -y nodejs
-
-echo "Node version: $(node -v)"
-echo "NPM version: $(npm -v)"
-
-# === CLONE APP ===
-if [ -d "app" ]; then
-    echo "Directory 'app' already exists — skipping git clone."
+# Install Node.js if missing
+if ! command -v node >/dev/null 2>&1; then
+    echo "== Installing Node.js =="
+    curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash -
+    sudo apt install -y nodejs
 else
-    echo "== Cloning App Repo =="
-    git clone $REPO_URL app
+    echo "Node detected: $(node -v)"
 fi
 
-cd app
+echo "NPM version: $(npm -v)"
 
-# === INSTALL DEPENDENCIES ===
-echo "== Installing NPM Packages =="
-npm install
+# --------------------------------------------------------
+# Clone repo if missing
+# --------------------------------------------------------
+if [ -d "$PROJECT_DIR" ]; then
+    echo "'$PROJECT_DIR' already exists — skipping clone."
+else
+    echo "== Cloning project =="
+    git clone "$REPO_URL"
+fi
 
-# === CREATE .env WITH MONGO CONNECTION ===
-echo "== Writing MongoDB Connection String =="
-echo "MONGO_URI=\"$MONGO_CONN_STRING\"" > .env
+cd "$PROJECT_DIR"
 
-# === INSTALL PM2 ===
+# --------------------------------------------------------
+# Detect server folder
+# --------------------------------------------------------
+if [ -d "server" ]; then
+    SERVER_DIR="server"
+elif [ -d "backend" ]; then
+    SERVER_DIR="backend"
+else
+    echo "❌ ERROR: No server or backend folder found."
+    exit 1
+fi
+
+# --------------------------------------------------------
+# Detect client folder
+# --------------------------------------------------------
+if [ -d "client" ]; then
+    CLIENT_DIR="client"
+elif [ -d "frontend" ]; then
+    CLIENT_DIR="frontend"
+else
+    echo "❌ ERROR: No client or frontend folder found."
+    exit 1
+fi
+
+# --------------------------------------------------------
+# Install backend dependencies
+# --------------------------------------------------------
+echo "== Installing backend dependencies =="
+cd "$SERVER_DIR"
+npm install --legacy-peer-deps
+
+echo "== Writing backend .env file =="
+cat <<EOF > .env
+MONGO_URI="$MONGO_URI"
+NODE_ENV=production
+PORT=5001
+EOF
+
+# Detect backend entry file
+if [ -f "server.js" ]; then
+    ENTRY="server.js"
+elif [ -f "index.js" ]; then
+    ENTRY="index.js"
+else
+    echo "❌ ERROR: No server.js or index.js found in backend"
+    exit 1
+fi
+
+# --------------------------------------------------------
+# Install frontend dependencies
+# --------------------------------------------------------
+echo "== Installing frontend dependencies =="
+cd "../$CLIENT_DIR"
+npm install --legacy-peer-deps
+
+# --------------------------------------------------------
+# Start backend with PM2
+# --------------------------------------------------------
 echo "== Installing PM2 =="
 sudo npm install -g pm2
 
-# === START APP ===
-echo "== Starting App with PM2 =="
-pm2 start index.js --name express-app
-
-# === PM2 STARTUP ===
-echo "== Enabling PM2 Startup =="
+echo "== Starting backend =="
+cd "../$SERVER_DIR"
+pm2 delete express-app >/dev/null 2>&1 || true
+pm2 start "$ENTRY" --name express-app
 pm2 save
-pm2 startup systemd -u $USER --hp $HOME | sudo bash
 
+echo ""
 echo "======================================="
-echo "✅ Node.js environment setup complete!"
-echo "📦 App deployed using PM2"
-echo "🔗 MongoDB connection saved in .env"
+echo " ✅ Setup complete for: $PROJECT_DIR!"
 echo "======================================="
