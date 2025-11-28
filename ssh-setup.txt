@@ -1,0 +1,6 @@
+0. ssh-copy-id username@your_vps_ip
+1. ssh-keyscan new-server-ip >> ~/.ssh/known_hosts
+2.Host newserver
+    HostName Ip-address
+    User root
+3.ssh newserver
