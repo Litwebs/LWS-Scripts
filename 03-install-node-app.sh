@@ -2,123 +2,126 @@
 set -euo pipefail
 
 # =====================================================================
-# 03-install-node-app.sh (IMPROVED VERSION)
-# Deploys or updates a Node.js app with PM2 + Git + production build.
+# 03-install-node-app.sh (FINAL VERSION — MATCHES YOUR PROJECT STRUCTURE)
+# Deploys or updates a Node.js app with PM2 + Git + backend/frontend install.
 # =====================================================================
 
-### Logging
 LOGFILE="/var/log/lws-node-deploy.log"
 exec > >(tee -a "$LOGFILE") 2>&1
 
-### Validate Arguments
 if [ "$#" -ne 1 ]; then
     echo "Usage: $0 <GitHubRepoURL>"
     exit 1
 fi
 
 REPO_URL="$1"
-APP_DIR="app"
+
+# Determine real project folder name
+PROJECT_DIR=$(basename "$REPO_URL" .git)
 APP_NAME="express-app"
-SYSTEM_USER=$(logname || echo "$USER")
 
 echo ""
 echo "=============================================="
 echo "   Node.js Deployment Script"
 echo "   Log: $LOGFILE"
+echo "   Project: $PROJECT_DIR"
 echo "=============================================="
 
 # ---------------------------------------------------------
 # 1. Validate repo
 # ---------------------------------------------------------
-echo "==> Checking GitHub repository"
 if ! git ls-remote "$REPO_URL" &>/dev/null; then
     echo "❌ Invalid GitHub repository URL"
     exit 1
 fi
 
 # ---------------------------------------------------------
-# 2. Ensure Node.js exists
+# 2. Clone or update repo
 # ---------------------------------------------------------
-if ! command -v node >/dev/null 2>&1; then
-    echo "❌ Node.js not installed. Run 01-setup-node.sh first."
-    exit 1
-fi
-
-# ---------------------------------------------------------
-# 3. Clone or update repository
-# ---------------------------------------------------------
-if [ ! -d "$APP_DIR" ]; then
-    echo "==> Cloning project for the first time"
-    git clone "$REPO_URL" "$APP_DIR"
-    cd "$APP_DIR"
+if [ ! -d "$PROJECT_DIR" ]; then
+    echo "==> Cloning repository into: $PROJECT_DIR"
+    git clone "$REPO_URL"
 else
-    echo "==> Project exists — pulling latest code"
-    cd "$APP_DIR"
+    echo "==> Repo exists — pulling latest changes"
+    cd "$PROJECT_DIR"
     git fetch --all
     git reset --hard origin/main || git reset --hard origin/master
+    cd ..
 fi
 
-# ---------------------------------------------------------
-# 4. Install dependencies (production)
-# ---------------------------------------------------------
-echo "==> Installing dependencies"
-npm install --omit=dev --legacy-peer-deps
+cd "$PROJECT_DIR"
 
 # ---------------------------------------------------------
-# 5. Detect app entry file
+# 3. Detect server directory
 # ---------------------------------------------------------
-echo "==> Detecting app entry point"
-
-START_FILE=""
-for file in index.js server.js app.js dist/server.js build/server.js; do
-    if [ -f "$file" ]; then
-        START_FILE="$file"
-        break
-    fi
-done
-
-if [ -z "$START_FILE" ]; then
-    echo "❌ Error: Could not find a valid startup file."
-    echo "Looked for: index.js, server.js, app.js, dist/server.js"
+if [ -d "server" ]; then
+    SERVER_DIR="server"
+elif [ -d "backend" ]; then
+    SERVER_DIR="backend"
+else
+    echo "❌ No server or backend folder found."
     exit 1
 fi
 
-echo "Using entry file: $START_FILE"
+# ---------------------------------------------------------
+# 4. Detect client directory
+# ---------------------------------------------------------
+if [ -d "client" ]; then
+    CLIENT_DIR="client"
+elif [ -d "frontend" ]; then
+    CLIENT_DIR="frontend"
+else
+    echo "❌ No client or frontend folder found."
+    exit 1
+fi
 
 # ---------------------------------------------------------
-# 6. Ensure PM2 installed
+# 5. Install backend dependencies
 # ---------------------------------------------------------
+echo "==> Installing backend dependencies"
+cd "$SERVER_DIR"
+npm install --legacy-peer-deps
+
+# Detect entry file
+if [ -f "server.js" ]; then
+    ENTRY="server.js"
+elif [ -f "index.js" ]; then
+    ENTRY="index.js"
+elif [ -f "app.js" ]; then
+    ENTRY="app.js"
+else
+    echo "❌ No valid backend entry file found"
+    exit 1
+fi
+
+cd ..
+
+# ---------------------------------------------------------
+# 6. Install frontend dependencies
+# ---------------------------------------------------------
+echo "==> Installing frontend dependencies"
+cd "$CLIENT_DIR"
+npm install --legacy-peer-deps
+cd ..
+
+# ---------------------------------------------------------
+# 7. PM2 setup
+# ---------------------------------------------------------
+echo "==> Ensuring PM2 installed"
 if ! command -v pm2 >/dev/null 2>&1; then
-    echo "==> Installing PM2 globally"
     sudo npm install -g pm2
-else
-    echo "PM2 already installed: $(pm2 -v)"
 fi
 
-# ---------------------------------------------------------
-# 7. Start or reload app with PM2
-# ---------------------------------------------------------
-if pm2 list | grep -q "$APP_NAME"; then
-    echo "==> Reloading existing app (zero downtime)"
-    pm2 reload "$APP_NAME" --update-env
-else
-    echo "==> Starting app via PM2"
-    pm2 start "$START_FILE" --name "$APP_NAME"
-fi
+echo "==> Starting/Reloading backend via PM2"
+cd "$SERVER_DIR"
 
-# ---------------------------------------------------------
-# 8. Enable PM2 startup
-# ---------------------------------------------------------
-echo "==> Configuring PM2 autostart"
-sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u "$SYSTEM_USER" --hp "/home/$SYSTEM_USER"
+pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
+pm2 start "$ENTRY" --name "$APP_NAME"
 pm2 save
 
-# ---------------------------------------------------------
-# 9. Done
-# ---------------------------------------------------------
 echo ""
 echo "=============================================="
-echo " Deployment Complete!"
-echo " App name: $APP_NAME"
+echo " 🚀 Deployment Complete!"
+echo " Backend started with PM2: $APP_NAME"
 echo " PM2 status: pm2 status"
 echo "=============================================="
