@@ -74,6 +74,7 @@ echo "==> Writing new nginx config"
 sudo bash -c "sed \
     -e \"s|{{DOMAIN}}|$DOMAIN|g\" \
     -e \"s|{{PORT}}|$PORT|g\" \
+    -e \"s|{{BODY_SIZE}}|$BODY_SIZE|g\" \
     < \"$TEMPLATE_FILE\" \
     > \"$NGINX_CONF\""
 
