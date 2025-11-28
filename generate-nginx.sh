@@ -25,6 +25,8 @@ fi
 DOMAIN="$1"
 PORT="$2"
 ALLOWED_ORIGINS="$3"
+BODY_SIZE="10m"
+
 
 TEMPLATE_FILE="nginx-template.conf"
 NGINX_CONF="/etc/nginx/sites-available/$DOMAIN"
