@@ -20,16 +20,18 @@ jobs:
           npm ci
           CI=false npm run build
 
-      # Upload build folder to VPS: ./server/build
+      # Upload client build to VPS so it ends up as: /root/LWS-Scripts/EBH-Server/server/build
       - name: Upload client build to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: root
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || 22 }}
-          source: "client/build/*"
+          port: ${{ secrets.VPS_PORT }}
+          source: "client/build/**" # where the build actually is on the runner
           target: "/root/LWS-Scripts/EBH-Server/server"
+          strip_components: 1 # drops the leading "client"
+          overwrite: true
 
       # Run backend deploy (no client build) on VPS
       - name: SSH into VPS and deploy backend
@@ -38,7 +40,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: root
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || 22 }}
+          port: ${{ secrets.VPS_PORT }}
           script: |
             cd /root/LWS-Scripts
             REPO_URL="https://github.com/${{ github.repository }}.git"
