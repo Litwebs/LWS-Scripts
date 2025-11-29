@@ -122,7 +122,7 @@ echo -e "${GREEN}==> STEP 3: Configuring Node.js with real Mongo URI${RESET}"
 echo -e "${GREEN}==> STEP 4: Deploying Node.js App${RESET}"
 
 chmod +x 03-install-node-app.sh
-./03-install-node-app.sh "$REPO_URL" "$DOMAIN"
+./03-install-node-app.sh "$REPO_URL" "$DOMAIN" "$PORT"
 
 # ======================================================================
 # 8. STEP 5 — Install Nginx + SSL

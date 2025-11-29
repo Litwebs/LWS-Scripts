@@ -16,10 +16,8 @@ Host: api (or whatever subdomain you want)
 Value: <YOUR_SERVER_PUBLIC_IP>
 TTL: Auto
 
-
 Example:
 api.litwebs.co.uk → 203.0.113.55
-
 
 Wait 5–30 minutes for DNS to propagate.
 
@@ -31,7 +29,6 @@ SSH into your server and create the folder:
 
 sudo nano /etc/lws-env/<api.domain.com>.env
 
-
 Add all backend environment variables, for example:
 
 MONGO_URI=mongodb://user:pass@localhost:27017/app?authSource=admin
@@ -40,11 +37,12 @@ STRIPE_SECRET=sk_xxxxxx
 PORT=5001
 NODE_ENV=production
 
+⚠️ Do NOT put MONGO_URI, NODE_ENV, or PORT in this file.
+Those are generated automatically by the deployment scripts.
 
 Set secure permissions:
 
-sudo chmod 600 /etc/lws-env/*.env
-
+sudo chmod 600 /etc/lws-env/\*.env
 
 ---
 
@@ -56,14 +54,11 @@ git clone https://github.com/YourUser/LWS-Scripts.git
 
 cd LWS-Scripts
 
-
 git clone https://github.com/YourUser/LWS-Scripts.git
 
 cd LWS-Scripts
 
-chmod +x *.sh
-
-
+chmod +x \*.sh
 
 ---
 
@@ -72,7 +67,6 @@ chmod +x *.sh
 Use ONE command to deploy everything:
 
 sudo ./setup.sh <GitRepoURL> <Domain> <Port> "<AllowedOrigins>"
-
 
 ### Example:
 
@@ -84,17 +78,16 @@ api.litwebs.co.uk
 https://litwebs.co.uk
 https://admin.litwebs.co.uk
 
-
 This will automatically:
 
-- Install Node 18 LTS  
-- Install MongoDB  
-- Inject your `.env` into the backend  
-- Install backend dependencies  
-- Install frontend dependencies  
-- Start backend via PM2  
-- Install Nginx + SSL  
-- Generate secure Nginx reverse proxy config  
+- Install Node 18 LTS
+- Install MongoDB
+- Inject your `.env` into the backend
+- Install backend dependencies
+- Install frontend dependencies
+- Start backend via PM2
+- Install Nginx + SSL
+- Generate secure Nginx reverse proxy config
 
 ---
 
@@ -105,34 +98,15 @@ Check PM2:
 pm2 status
 pm2 logs express-app
 
-
 Check Nginx:
 
 sudo systemctl status nginx
 
-
 Your API should now be live at:
 https://api.litwebs.co.uk
-
 
 ---
 
 # 🎉 Done!
 
 Your application is fully deployed with SSL, PM2, MongoDB, and Nginx.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
