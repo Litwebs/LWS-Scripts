@@ -118,7 +118,8 @@ if [ -z "${APP_USER:-}" ] || [ -z "${APP_PASS:-}" ] || [ -z "${APP_DB:-}" ]; the
     exit 1
 fi
 
-MONGO_URI="mongodb://${APP_USER}:${APP_PASS}@localhost:27017/${APP_DB}?authSource=admin"
+# Use APP_DB as authSource because the app user is created in that DB
+MONGO_URI="mongodb://${APP_USER}:${APP_PASS}@localhost:27017/${APP_DB}?authSource=${APP_DB}"
 
 FINAL_ENV_PATH="$SERVER_DIR/.env"
 
