@@ -23,6 +23,8 @@ Wait 5–30 minutes for DNS to propagate.
 
 ---
 
+./setup.sh https://github.com/Litwebs/T3Server-ABORTED.git api.litwebs.co.uk 5001 "https://litwebs.co.uk"
+
 # ✅ 2. Create Environment Variables (REQUIRED)
 
 SSH into your server and create the folder:
