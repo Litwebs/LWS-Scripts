@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # =====================================================================
-# 05-auto-deploy.sh — Lightweight Git Auto Deploy (backend + client)
+# 05-auto-deploy.sh — Lightweight Git Auto Deploy (backend only)
 # =====================================================================
 
 if [ "$#" -ne 1 ]; then
@@ -58,16 +58,6 @@ else
 fi
 
 # ---------------------------------------------------------
-# Detect client folder
-# ---------------------------------------------------------
-CLIENT_DIR=""
-if [ -d "client" ]; then
-  CLIENT_DIR="client"
-elif [ -d "frontend" ]; then
-  CLIENT_DIR="frontend"
-fi
-
-# ---------------------------------------------------------
 # Backend: install deps
 # ---------------------------------------------------------
 echo "==> Installing backend dependencies"
@@ -86,35 +76,16 @@ else
     exit 1
 fi
 
-cd ..
-
-# ---------------------------------------------------------
-# Client: install deps (+ optional build)
-# ---------------------------------------------------------
-if [ -n "$CLIENT_DIR" ]; then
-  echo "==> Installing client dependencies"
-  cd "$CLIENT_DIR"
-  npm install --legacy-peer-deps
-
-  echo "==> Running client build (if available)"
-  # If build script is missing or fails, don't kill the deploy
-  npm run build || echo "⚠ npm run build failed or missing, skipping build step"
-
-  cd ..
-else
-  echo "ℹ No client/frontend directory found — skipping client update"
-fi
-
 # ---------------------------------------------------------
 # Reload backend with PM2
 # ---------------------------------------------------------
 echo "==> Reloading PM2 app: $APP_NAME"
-cd "$SERVER_DIR"
 
 pm2 reload "$APP_NAME" --update-env || pm2 start "$ENTRY" --name "$APP_NAME"
 pm2 save
 
 echo ""
 echo "=============================================="
-echo " ✅ Auto deploy complete (backend + client)"
+echo " ✅ Auto deploy complete (backend only)"
+echo "   (React build must be uploaded separately)"
 echo "=============================================="

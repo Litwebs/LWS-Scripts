@@ -1,0 +1,46 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Build client on GitHub runner
+      - name: Build client
+        working-directory: client
+        run: |
+          npm ci
+          CI=false npm run build
+
+      # Upload build folder to VPS: ./server/build
+      - name: Upload client build to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "client/build/*"
+          target: "/root/LWS-Scripts/EBH-Server/server"
+
+      # Run backend deploy (no client build) on VPS
+      - name: SSH into VPS and deploy backend
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            cd /root/LWS-Scripts
+            REPO_URL="https://github.com/${{ github.repository }}.git"
+            export SKIP_CLIENT_BUILD=1
+            ./05-auto-deploy.sh "$REPO_URL"
