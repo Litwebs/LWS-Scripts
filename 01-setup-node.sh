@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # =====================================================================
-# 01-setup-node.sh — LitWebs Universal Node Setup
+# 01-setup-node.sh — LitWebs Universal Node Setup (Node 18 LTS)
 # Supports structure:
 #   project-name/
 #     server/
@@ -29,18 +29,24 @@ echo "======================================="
 # --------------------------------------------------------
 sudo apt update -y
 sudo apt upgrade -y
-sudo apt install -y curl ca-certificates git
+sudo apt install -y curl ca-certificates git build-essential
 
-# Install Node.js if missing
-if ! command -v node >/dev/null 2>&1; then
-    echo "== Installing Node.js =="
-    curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash -
-    sudo apt install -y nodejs
-else
-    echo "Node detected: $(node -v)"
-fi
+# --------------------------------------------------------
+# REMOVE any previous Node versions
+# --------------------------------------------------------
+echo "== Removing old Node.js versions =="
+sudo apt purge -y nodejs npm || true
+sudo rm -rf /etc/apt/sources.list.d/nodesource.list || true
 
-echo "NPM version: $(npm -v)"
+# --------------------------------------------------------
+# Install Node 18 LTS (SAFE & SUPPORTED)
+# --------------------------------------------------------
+echo "== Installing Node.js 18 LTS =="
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+
+echo "Node version: $(node -v)"
+echo "NPM version:  $(npm -v)"
 
 # --------------------------------------------------------
 # Clone repo if missing
@@ -83,6 +89,7 @@ fi
 # --------------------------------------------------------
 echo "== Installing backend dependencies =="
 cd "$SERVER_DIR"
+rm -rf node_modules package-lock.json || true
 npm install --legacy-peer-deps
 
 echo "== Writing backend .env file =="
@@ -97,8 +104,10 @@ if [ -f "server.js" ]; then
     ENTRY="server.js"
 elif [ -f "index.js" ]; then
     ENTRY="index.js"
+elif [ -f "app.js" ]; then
+    ENTRY="app.js"
 else
-    echo "❌ ERROR: No server.js or index.js found in backend"
+    echo "❌ ERROR: No entry file found (server.js/index.js/app.js)"
     exit 1
 fi
 
@@ -107,6 +116,7 @@ fi
 # --------------------------------------------------------
 echo "== Installing frontend dependencies =="
 cd "../$CLIENT_DIR"
+rm -rf node_modules package-lock.json || true
 npm install --legacy-peer-deps
 
 # --------------------------------------------------------

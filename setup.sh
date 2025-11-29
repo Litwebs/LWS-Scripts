@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ======================================================================
-#  run-full-setup.sh  (LitWebs Deployment Engine – Automated)
+#  run-full-setup.sh  (LitWebs Deployment Engine – Fully Automated)
 # ======================================================================
 
 # Colors
@@ -57,6 +57,14 @@ if [[ "$OS_VER" != "20.04" && "$OS_VER" != "22.04" && "$OS_VER" != "24.04" ]]; t
 fi
 
 # ======================================================================
+# 0. RUN CONFIG SETUP (.env creation for this domain)
+# ======================================================================
+echo -e "${GREEN}==> STEP 0: Preparing environment & config ${RESET}"
+
+chmod +x 00-config-setup.sh
+./00-config-setup.sh "$DOMAIN"
+
+# ======================================================================
 # 3. ROLLBACK HANDLER
 # ======================================================================
 rollback() {
@@ -79,7 +87,7 @@ rollback() {
 trap rollback ERR
 
 # ======================================================================
-# 4. STEP 1 — Node.js + Base Setup
+# 4. STEP 1 — Node.js Base Setup
 # ======================================================================
 echo -e "${GREEN}==> STEP 1: Installing Node.js & initial app setup${RESET}"
 
@@ -102,19 +110,19 @@ MONGO_URI="mongodb://${APP_USER}:${APP_PASS}@localhost:27017/${APP_DB}?authSourc
 echo -e "${YELLOW}Mongo URI:${RESET} $MONGO_URI"
 
 # ======================================================================
-# 6. STEP 3 — Re-run Node setup with REAL Mongo URI
+# 6. STEP 3 — Re-run Node Setup (with REAL Mongo URI)
 # ======================================================================
 echo -e "${GREEN}==> STEP 3: Configuring Node.js with real Mongo URI${RESET}"
 
 ./01-setup-node.sh "$REPO_URL" "$MONGO_URI"
 
 # ======================================================================
-# 7. STEP 4 — Deploy / Update Node App
+# 7. STEP 4 — Deploy/Update Node App
 # ======================================================================
 echo -e "${GREEN}==> STEP 4: Deploying Node.js App${RESET}"
 
 chmod +x 03-install-node-app.sh
-./03-install-node-app.sh "$REPO_URL"
+./03-install-node-app.sh "$REPO_URL" "$DOMAIN"
 
 # ======================================================================
 # 8. STEP 5 — Install Nginx + SSL
