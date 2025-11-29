@@ -132,12 +132,10 @@ MONGO_URI="mongodb://${APP_USER}:${APP_PASS}@localhost:27017/${APP_DB}?authSourc
 
 FINAL_ENV_PATH="$SERVER_DIR/.env"
 
-# Create final .env: script-managed vars + user vars (excluding conflicts)
 {
     echo "NODE_ENV=production"
     echo "PORT=$PORT"
     echo "MONGO_URI=$MONGO_URI"
-    # Append all user vars except ones we manage ourselves
     grep -vE '^(MONGO_URI|NODE_ENV|PORT)=' "$ENV_SOURCE" || true
 } > "$FINAL_ENV_PATH"
 
@@ -175,10 +173,29 @@ echo "==> Installing frontend dependencies"
 cd "$CLIENT_DIR"
 rm -rf node_modules package-lock.json || true
 npm install --legacy-peer-deps
+
+# ---------------------------------------------------------
+# 8. Build frontend and move into backend
+# ---------------------------------------------------------
+echo "==> Building frontend (npm run build in $CLIENT_DIR)"
+npm run build
+
+echo "==> Moving build output into backend: $SERVER_DIR/build"
+
+# Only remove existing build folder if it exists
+if [ -d "../$SERVER_DIR/build" ]; then
+    echo "   Existing build directory found, removing it..."
+    rm -rf "../$SERVER_DIR/build"
+else
+    echo "   No existing build directory, nothing to remove."
+fi
+
+mv build "../$SERVER_DIR/build"
+
 cd ..
 
 # ---------------------------------------------------------
-# 8. PM2 Process Management
+# 9. PM2 Process Management
 # ---------------------------------------------------------
 echo "==> Starting backend using PM2"
 cd "$SERVER_DIR"
@@ -187,7 +204,6 @@ pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
 pm2 start "$ENTRY" --name "$APP_NAME"
 pm2 save
 
-# Optionally ensure PM2 starts on reboot
 pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
 
 echo ""
