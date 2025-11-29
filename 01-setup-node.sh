@@ -49,6 +49,27 @@ echo "Node version: $(node -v)"
 echo "NPM version:  $(npm -v)"
 
 # --------------------------------------------------------
+# Trust github.com host key (auto-answer yes)
+# --------------------------------------------------------
+SSH_DIR="/root/.ssh"
+KNOWN_HOSTS="$SSH_DIR/known_hosts"
+
+echo "== Ensuring github.com is trusted for SSH =="
+
+mkdir -p "$SSH_DIR"
+chmod 700 "$SSH_DIR"
+
+touch "$KNOWN_HOSTS"
+chmod 644 "$KNOWN_HOSTS"
+
+if ! ssh-keygen -F github.com -f "$KNOWN_HOSTS" >/dev/null 2>&1; then
+  ssh-keyscan -H github.com >> "$KNOWN_HOSTS" 2>/dev/null
+  echo "✔ Added github.com to $KNOWN_HOSTS"
+else
+  echo "✔ github.com already in $KNOWN_HOSTS"
+fi
+
+# --------------------------------------------------------
 # Clone repo if missing
 # --------------------------------------------------------
 if [ -d "$PROJECT_DIR" ]; then
