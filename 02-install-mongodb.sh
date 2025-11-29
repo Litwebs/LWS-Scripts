@@ -25,6 +25,27 @@ APP_PASS="AppUserPassword123!"
 SWAP_SIZE="2G"
 
 # -------------------------
+# Helper: wait for MongoDB to be ready
+# -------------------------
+wait_for_mongo() {
+  echo "==> Waiting for MongoDB to be ready on 127.0.0.1:27017..."
+
+  # Try up to 30 times (~60 seconds total)
+  for i in {1..30}; do
+    if mongosh --quiet --eval "db.adminCommand('ping')" >/dev/null 2>&1; then
+      echo "✔ MongoDB is up and responding."
+      return 0
+    fi
+    echo "   ...still starting (attempt $i/30)"
+    sleep 2
+  done
+
+  echo "❌ MongoDB did not become ready in time."
+  echo "   Check: systemctl status mongod && journalctl -u mongod -n 40"
+  return 1
+}
+
+# -------------------------
 # Detect OS
 # -------------------------
 UBUNTU_CODENAME=$(lsb_release -cs)
@@ -85,6 +106,11 @@ if ! swapon --show | grep -q "swap"; then
 else
     echo "Swap already exists"
 fi
+
+# -------------------------
+# Wait for Mongo before creating admin user
+# -------------------------
+wait_for_mongo
 
 # -------------------------
 # Create Admin User (auth DISABLED)
