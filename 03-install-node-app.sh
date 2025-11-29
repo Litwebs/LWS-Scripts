@@ -145,14 +145,50 @@ echo "✔ Backend .env written to $FINAL_ENV_PATH"
 echo "   (MONGO_URI, NODE_ENV, PORT managed by script)"
 
 # ---------------------------------------------------------
-# 6. Install backend dependencies
+# 6. Run unified build via server/package.json
 # ---------------------------------------------------------
-echo "==> Installing backend dependencies"
-cd "$SERVER_DIR"
-rm -rf node_modules package-lock.json || true
-npm install --legacy-peer-deps
+echo "==> Running unified build from $SERVER_DIR (npm run build)"
 
-# Detect entry point
+# Safety: this unified build assumes the backend folder in the repo is literally 'server'
+if [ "$SERVER_DIR" != "server" ]; then
+    echo "❌ Unified build expects backend folder 'server', but detected '$SERVER_DIR'."
+    echo "   Either adjust the project build script or update this deploy script."
+    exit 1
+fi
+
+cd "$SERVER_DIR"
+
+# Optional: clean server + client node_modules first
+rm -rf node_modules package-lock.json || true
+cd "../$CLIENT_DIR"
+rm -rf node_modules package-lock.json || true
+cd "../$SERVER_DIR"
+
+# Use legacy peer deps for all npm install calls inside the build script
+export npm_config_legacy_peer_deps=true
+
+set +e
+npm run build
+BUILD_EXIT_CODE=$?
+set -e
+
+if [ "$BUILD_EXIT_CODE" -ne 0 ]; then
+    echo "❌ Build failed with exit code $BUILD_EXIT_CODE"
+    echo "   Attempting Ajv compatibility fix (ajv@^8 + ajv-keywords@^5)..."
+    npm install ajv@^8 ajv-keywords@^5 --no-save --legacy-peer-deps
+    echo "==> Retrying build..."
+    npm run build
+fi
+
+# At this point:
+# - server npm install is done
+# - client npm install is done
+# - client build is done
+# - build has been moved into ../server (this folder)
+
+# ---------------------------------------------------------
+# 7. Detect entry point for PM2
+# ---------------------------------------------------------
 if [ -f "server.js" ]; then
     ENTRY="server.js"
 elif [ -f "index.js" ]; then
@@ -164,41 +200,10 @@ else
     exit 1
 fi
 
-cd ..
-
 # ---------------------------------------------------------
-# 7. Install frontend dependencies
-# ---------------------------------------------------------
-echo "==> Installing frontend dependencies"
-cd "$CLIENT_DIR"
-rm -rf node_modules package-lock.json || true
-npm install --legacy-peer-deps
-
-# ---------------------------------------------------------
-# 8. Build frontend and move into backend
-# ---------------------------------------------------------
-echo "==> Building frontend (npm run build in $CLIENT_DIR)"
-npm run build
-
-echo "==> Moving build output into backend: $SERVER_DIR/build"
-
-# Only remove existing build folder if it exists
-if [ -d "../$SERVER_DIR/build" ]; then
-    echo "   Existing build directory found, removing it..."
-    rm -rf "../$SERVER_DIR/build"
-else
-    echo "   No existing build directory, nothing to remove."
-fi
-
-mv build "../$SERVER_DIR/build"
-
-cd ..
-
-# ---------------------------------------------------------
-# 9. PM2 Process Management
+# 8. PM2 Process Management
 # ---------------------------------------------------------
 echo "==> Starting backend using PM2"
-cd "$SERVER_DIR"
 
 pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
 pm2 start "$ENTRY" --name "$APP_NAME"
