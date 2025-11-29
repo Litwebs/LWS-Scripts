@@ -48,11 +48,6 @@ if [ ! -f "$ENV_FILE" ]; then
 # This file is PRIVATE and is NOT stored in Git.
 # ====================================================
 
-# Example:
-# MONGO_URI=
-# JWT_SECRET=
-# STRIPE_SECRET_KEY=
-# CUSTOM_VALUE=
 EOF
 
     sudo chmod 600 "$ENV_FILE"

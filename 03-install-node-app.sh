@@ -17,6 +17,15 @@ REPO_URL="$1"
 DOMAIN="$2"
 PORT="$3"
 
+# Convert HTTPS GitHub URL to SSH if needed (for private repos)
+ORIG_REPO_URL="$REPO_URL"
+if [[ "$REPO_URL" =~ ^https://github.com/(.*)\.git$ ]]; then
+    REPO_URL="git@github.com:${BASH_REMATCH[1]}.git"
+    echo "Converted repo URL:"
+    echo "  Original: $ORIG_REPO_URL"
+    echo "  SSH:      $REPO_URL"
+fi
+
 ENV_SOURCE="/etc/lws-env/$DOMAIN.env"
 MONGO_ENV="/etc/lws-mongo.env"
 APP_NAME="express-app"
@@ -48,7 +57,7 @@ echo "✔ Node version OK: $NODE_VER"
 # 1. Validate repository
 # ---------------------------------------------------------
 if ! git ls-remote "$REPO_URL" &>/dev/null; then
-    echo "❌ Invalid GitHub repository URL"
+    echo "❌ Invalid GitHub repository URL: $REPO_URL"
     exit 1
 fi
 

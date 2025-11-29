@@ -32,6 +32,15 @@ DOMAIN="$2"
 PORT="$3"
 ALLOWED_ORIGINS="$4"
 
+# Convert HTTPS GitHub URL to SSH if needed (for private repos)
+ORIG_REPO_URL="$REPO_URL"
+if [[ "$REPO_URL" =~ ^https://github.com/(.*)\.git$ ]]; then
+    REPO_URL="git@github.com:${BASH_REMATCH[1]}.git"
+    echo -e "${YELLOW}Converted repo URL:${RESET}"
+    echo "  Original: $ORIG_REPO_URL"
+    echo "  SSH:      $REPO_URL"
+fi
+
 # Check numeric port
 if ! [[ "$PORT" =~ ^[0-9]+$ ]]; then
     echo -e "${RED}Error: PORT must be numeric.${RESET}"
@@ -55,6 +64,14 @@ if [[ "$OS_VER" != "20.04" && "$OS_VER" != "22.04" && "$OS_VER" != "24.04" ]]; t
     echo -e "${RED}❌ Unsupported Ubuntu version.${RESET}"
     exit 1
 fi
+
+# ======================================================================
+# -1. SSH KEY SETUP (for GitHub + CI)
+# ======================================================================
+echo -e "${GREEN}==> STEP -1: Ensuring SSH key for GitHub + CI ${RESET}"
+
+chmod +x 05-setup-ci-ssh-key.sh
+./05-setup-ci-ssh-key.sh
 
 # ======================================================================
 # 0. RUN CONFIG SETUP (.env creation for this domain)
@@ -105,7 +122,8 @@ chmod +x 02-install-mongodb.sh
 echo -e "${GREEN}==> Loading Mongo Credentials${RESET}"
 source /etc/lws-mongo.env
 
-MONGO_URI="mongodb://${APP_USER}:${APP_PASS}@localhost:27017/${APP_DB}?authSource=admin"
+# Use APP_DB as authSource to match where the app user is created
+MONGO_URI="mongodb://${APP_USER}:${APP_PASS}@localhost:27017/${APP_DB}?authSource=${APP_DB}"
 
 echo -e "${YELLOW}Mongo URI:${RESET} $MONGO_URI"
 
