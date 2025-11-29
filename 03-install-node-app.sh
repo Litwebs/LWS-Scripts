@@ -132,10 +132,12 @@ MONGO_URI="mongodb://${APP_USER}:${APP_PASS}@localhost:27017/${APP_DB}?authSourc
 
 FINAL_ENV_PATH="$SERVER_DIR/.env"
 
+# Create final .env: script-managed vars + user vars (excluding conflicts)
 {
     echo "NODE_ENV=production"
     echo "PORT=$PORT"
     echo "MONGO_URI=$MONGO_URI"
+    # Append all user vars except ones we manage ourselves
     grep -vE '^(MONGO_URI|NODE_ENV|PORT)=' "$ENV_SOURCE" || true
 } > "$FINAL_ENV_PATH"
 
@@ -145,50 +147,14 @@ echo "✔ Backend .env written to $FINAL_ENV_PATH"
 echo "   (MONGO_URI, NODE_ENV, PORT managed by script)"
 
 # ---------------------------------------------------------
-# 6. Run unified build via server/package.json
+# 6. Install backend dependencies
 # ---------------------------------------------------------
-echo "==> Running unified build from $SERVER_DIR (npm run build)"
-
-# Safety: this unified build assumes the backend folder in the repo is literally 'server'
-if [ "$SERVER_DIR" != "server" ]; then
-    echo "❌ Unified build expects backend folder 'server', but detected '$SERVER_DIR'."
-    echo "   Either adjust the project build script or update this deploy script."
-    exit 1
-fi
-
+echo "==> Installing backend dependencies"
 cd "$SERVER_DIR"
-
-# Optional: clean server + client node_modules first
 rm -rf node_modules package-lock.json || true
-cd "../$CLIENT_DIR"
-rm -rf node_modules package-lock.json || true
-cd "../$SERVER_DIR"
+npm install --legacy-peer-deps
 
-# Use legacy peer deps for all npm install calls inside the build script
-export npm_config_legacy_peer_deps=true
-
-set +e
-npm run build
-BUILD_EXIT_CODE=$?
-set -e
-
-if [ "$BUILD_EXIT_CODE" -ne 0 ]; then
-    echo "❌ Build failed with exit code $BUILD_EXIT_CODE"
-    echo "   Attempting Ajv compatibility fix (ajv@^8 + ajv-keywords@^5)..."
-    npm install ajv@^8 ajv-keywords@^5 --no-save --legacy-peer-deps
-    echo "==> Retrying build..."
-    npm run build
-fi
-
-# At this point:
-# - server npm install is done
-# - client npm install is done
-# - client build is done
-# - build has been moved into ../server (this folder)
-
-# ---------------------------------------------------------
-# 7. Detect entry point for PM2
-# ---------------------------------------------------------
+# Detect entry point
 if [ -f "server.js" ]; then
     ENTRY="server.js"
 elif [ -f "index.js" ]; then
@@ -200,15 +166,28 @@ else
     exit 1
 fi
 
+cd ..
+
+# ---------------------------------------------------------
+# 7. Install frontend dependencies
+# ---------------------------------------------------------
+echo "==> Installing frontend dependencies"
+cd "$CLIENT_DIR"
+rm -rf node_modules package-lock.json || true
+npm install --legacy-peer-deps
+cd ..
+
 # ---------------------------------------------------------
 # 8. PM2 Process Management
 # ---------------------------------------------------------
 echo "==> Starting backend using PM2"
+cd "$SERVER_DIR"
 
 pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
 pm2 start "$ENTRY" --name "$APP_NAME"
 pm2 save
 
+# Optionally ensure PM2 starts on reboot
 pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
 
 echo ""
