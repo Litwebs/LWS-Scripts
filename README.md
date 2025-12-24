@@ -23,7 +23,7 @@ Wait 5–30 minutes for DNS to propagate.
 
 ---
 
-./setup.sh https://github.com/Litwebs/T3Server-ABORTED.git api.litwebs.co.uk 5001 "https://litwebs.co.uk"
+./setup.sh https://github.com/repo.git api.litwebs.co.uk 5001 "https://litwebs.co.uk"
 
 # ✅ 2. Create Environment Variables (REQUIRED)
 
@@ -33,7 +33,7 @@ sudo nano /etc/lws-env/<api.domain.com>.env
 
 Add all backend environment variables, for example:
 
-MONGO_URI=mongodb://user:pass@localhost:27017/app?authSource=admin
+
 JWT_SECRET=yourjwtsecret
 STRIPE_SECRET=sk_xxxxxx
 PORT=5001
