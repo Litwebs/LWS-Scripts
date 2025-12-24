@@ -18,10 +18,10 @@ echo "==========================================="
 # CONFIG (CUSTOMIZABLE)
 # -------------------------
 ADMIN_USER="Admin"
-ADMIN_PASS="T2!yK7#pV4^uA9@rM1%zX6&wQ3*eH8gN5!cD0"
+ADMIN_PASS="T2yK7pV4uA9@rM1zX6&wQ3eH8gN5cD0"
 APP_DB="DB"
 APP_USER="DBUSER"
-APP_PASS="N4^sP9!qX2#kT7@rM6%vA1&zE8*Yc3!hD0"
+APP_PASS="N4sP9qX2kT7rM6vA1zE8Yc3hD0"
 SWAP_SIZE="2G"
 
 # -------------------------
