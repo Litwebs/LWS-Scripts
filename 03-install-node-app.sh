@@ -44,9 +44,9 @@ echo "=============================================="
 # ---------------------------------------------------------
 NODE_VER=$(node -v || echo "none")
 
-if [[ "$NODE_VER" != v18* ]]; then
+if [[ "$NODE_VER" != v24* ]]; then
     echo "❌ ERROR: Unsupported Node version: $NODE_VER"
-    echo "   Expected: Node 18 LTS"
+    echo "   Expected: Node 24 LTS"
     echo "   Fix: Run 01-setup-node.sh again"
     exit 1
 fi

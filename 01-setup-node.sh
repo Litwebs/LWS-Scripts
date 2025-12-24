@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # =====================================================================
-# 01-setup-node.sh — LitWebs Universal Node Setup (Node 18 LTS)
+# 01-setup-node.sh — LitWebs Universal Node Setup (Node 24 LTS)
 # Supports structure:
 #   project-name/
 #     server/
