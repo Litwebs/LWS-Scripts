@@ -39,10 +39,10 @@ sudo apt purge -y nodejs npm || true
 sudo rm -rf /etc/apt/sources.list.d/nodesource.list || true
 
 # --------------------------------------------------------
-# Install Node 18 LTS (SAFE & SUPPORTED)
+# Install Node 24 LTS (SAFE & SUPPORTED)
 # --------------------------------------------------------
-echo "== Installing Node.js 18 LTS =="
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+echo "== Installing Node.js 24 LTS =="
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt install -y nodejs
 
 echo "Node version: $(node -v)"
