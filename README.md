@@ -21,6 +21,12 @@ api.litwebs.co.uk → 203.0.113.55
 
 Wait 5–30 minutes for DNS to propagate.
 
+add the following to vite.conging in client directory:
+ build: {
+    outDir: "build",
+    emptyOutDir: true,
+  },
+
 ---
 
 ./setup.sh https://github.com/repo.git api.litwebs.co.uk 5001 "https://litwebs.co.uk"
